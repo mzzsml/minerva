@@ -1,6 +1,8 @@
 buid:
 	@go build -o ./bin/heimdallr
 
-run:
-	buid
+clean:
+	@rm -rf ./bin/
+
+run: clean buid
 	./bin/heimdallr
