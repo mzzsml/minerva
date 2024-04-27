@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Select a project</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div id="container">
+    <h1>Select a project</h1>
+    <form class="form-example" id="project-select-form" action="/select-a-project">
+      <label for="select-a-project"></label>
+      <input type="text" name="select-a-project" required>
+    </form>
+    {{range .}}
+    <a href="/project/{{.Name}}">{{.Name}}</a>
+    {{end}}
+  </div>
+</body>
+</html>

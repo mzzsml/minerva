@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CRTSH</title>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+  <table class="crtsh crtsh-table">
+    <tr>
+      <th>RISULTATI</th>
+    </tr>
+    {{range .}}
+      <tr>
+        <td>{{.}}</td>
+      </tr>
+    {{end}}
+  </table>
+</body>
+</html>

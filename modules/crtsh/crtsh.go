@@ -2,12 +2,11 @@ package crtsh
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
 
-func QueryCrtsh(w http.ResponseWriter, h *http.Request, d string) {
+func QueryCrtsh(w http.ResponseWriter, h *http.Request, d string) []string {
 	var domainNames []string
 	var m map[string]interface{}
 
@@ -40,30 +39,15 @@ func QueryCrtsh(w http.ResponseWriter, h *http.Request, d string) {
 
 	var tempDomains = make([]string, 0, len(domainNames))
 	tempDomains = append(tempDomains, domainNames[0])
-	//j := 0
 	for _, d := range domainNames {
 		for i := 0; i < len(tempDomains); i++ {
 			if !isFound(d, tempDomains) {
 				tempDomains = append(tempDomains, d)
 			}
-			//if d != tempDomains[i] {
-			//	tempDomains = append(tempDomains, d)
-			//}
 		}
-		//for j < len(tempDomains) {
-		//	if d != tempDomains[j] {
-		//		tempDomains[j] = d
-		//	}
-		//	j++
-		//}
 	}
 
-	for _, d := range tempDomains {
-		fmt.Fprintln(w, d)
-	}
-	//for _, d := range domainNames {
-	//	fmt.Fprintln(w, d)
-	//}
+	return tempDomains
 }
 
 func isFound(target string, slice []string) bool {

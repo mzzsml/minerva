@@ -1,8 +1,8 @@
 buid:
-	@go build -o ./bin/heimdallr
+	@go build -o ./bin/minerva
 
 clean:
 	@rm -rf ./bin/
 
 run: clean buid
-	./bin/heimdallr
+	./bin/minerva

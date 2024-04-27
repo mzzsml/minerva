@@ -1,0 +1,27 @@
+.crtsh-table {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Imposta l'altezza al 100% della viewport se necessario */
+}
+
+tr:nth-child(even) {
+  background-color: #f2f2f2; /* Colore di sfondo per le righe pari */
+}
+
+.search {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Imposta l'altezza al 100% della viewport se necessario */
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Imposta l'altezza al 100% della viewport se necessario */
+}
