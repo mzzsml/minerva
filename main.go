@@ -8,12 +8,8 @@ import (
 
 	"github.com/minerva/api"
 	"github.com/minerva/modules/crtsh"
+	types "github.com/minerva/types"
 )
-
-type Project struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
 
 type User struct {
 	Name     string
@@ -40,7 +36,7 @@ func selectProjectHandler(w http.ResponseWriter, r *http.Request) {
 
 	projectsJson := []byte(api.GetProjects())
 
-	var projects []Project
+	var projects []types.Project
 
 	err := json.Unmarshal(projectsJson, &projects)
 	if err != nil {

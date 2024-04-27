@@ -9,12 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/minerva/db"
+	types "github.com/minerva/types"
 )
-
-type Project struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-}
 
 func GetProjects() string {
 	conn, err := db.CreateNewPool()
@@ -24,7 +20,7 @@ func GetProjects() string {
 
 	rows, _ := conn.Query(context.Background(), "SELECT id, name FROM project")
 
-	projects, _ := pgx.CollectRows(rows, pgx.RowToStructByName[Project])
+	projects, _ := pgx.CollectRows(rows, pgx.RowToStructByName[types.Project])
 	if err != nil {
 		fmt.Printf("CollectRows error: %v", err)
 		os.Exit(1)
