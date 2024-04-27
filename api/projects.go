@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/minerva/db"
-	types "github.com/minerva/types"
+	"github.com/minerva/types"
 )
 
 func GetProjects() string {

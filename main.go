@@ -8,7 +8,7 @@ import (
 
 	"github.com/minerva/api"
 	"github.com/minerva/modules/crtsh"
-	types "github.com/minerva/types"
+	"github.com/minerva/types"
 )
 
 type User struct {
