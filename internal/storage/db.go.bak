@@ -1,0 +1,34 @@
+package storage
+
+import (
+    "database/sql"
+    "log"
+
+    _ "github.com/lib/pq"
+)
+
+func GetHostById(id int) {
+    conn := "user=samuele password=asd host=192.168.1.48 dbname=minerva sslmode=disable"
+    db, err := sql.Open("postgres", conn)
+    if err != nil {
+        log.Fatal(err)
+    }
+    rows, err := db.Query("SELECT port_id, state, service FROM port WHERE host_id=1")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var (
+            port int
+            state string
+            service string
+        )
+        err := rows.Scan(&port, &state, &service)
+        if err != nil {
+            log.Fatal(err)
+        }
+        log.Printf("port %d, state %s, service %s\n", port, state, service)
+    }
+}

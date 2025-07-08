@@ -1,16 +1,9 @@
 package main
 
 import (
-    "net/http"
+    "github.com/mzzsml/minerva/internal/http"
 )
 
 func main() {
-    mux := http.NewServeMux()
-
-    server := &http.Server{
-        Addr: ":8080",
-        Handler: mux,
-    }
-
-    server.ListenAndServe()
+    http.StartHttpServer()
 }
