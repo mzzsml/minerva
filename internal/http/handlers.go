@@ -5,8 +5,9 @@ import (
     "log"
     "fmt"
 
-    "github.com/mzzsml/minerva/internal/parser"
+    "github.com/mzzsml/minerva/internal/model"
     "github.com/mzzsml/minerva/internal/storage"
+    //"github.com/mzzsml/minerva/internal/cli"
 )
 
 func handleNewScan(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +22,7 @@ func handleNewScan(w http.ResponseWriter, r *http.Request) {
     //fmt.Fprintf(w, "%s\n", body)
 
     //faccio il parsing
-    var h parser.Host
+    var h model.Host
     err := h.ParseFromJson(body)
     if err != nil {
         log.Fatal(err)
@@ -37,8 +38,12 @@ func handleGetHostDetails(w http.ResponseWriter, r *http.Request) {
     // qui lo simulo hardcodando
     //hostAddr := "192.168.1.48"
     
-    //var p parser.Port
-    p, err := storage.GetHostDetails(r.PathValue("hostAddr"))
+    //var p model.Port
+    //faccio qui connessione a db?
+    // d := storage.NewDb(connectionString)?
+    var db storage.Db
+    //p, err := cli.Database.db.GetHostDetails(r.PathValue("hostAddr"))
+    p, err := db.GetHostDetails(r.PathValue("hostAddr"))
     if err != nil {
         log.Printf("%s", err)
     }

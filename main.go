@@ -1,9 +1,9 @@
 package main
 
 import (
-    "github.com/mzzsml/minerva/internal/http"
+    "github.com/mzzsml/minerva/internal/cli"
 )
 
 func main() {
-    http.StartHttpServer()
+    cli.ParseFlags()
 }
