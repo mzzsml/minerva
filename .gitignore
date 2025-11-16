@@ -1,6 +1,7 @@
 .vscode/
 bin/
 test/
+env/
 
 .DS_Store
 .env
