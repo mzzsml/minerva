@@ -1,7 +1,7 @@
 .vscode/
 bin/
 test/
-env/
+etc/
 
 .DS_Store
 .env
