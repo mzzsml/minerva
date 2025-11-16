@@ -1,36 +1,35 @@
 package storage
 
 import (
-    "log"
-    "context"
+	"context"
+	"log"
 
-    "github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 
-    "github.com/mzzsml/minerva/internal/model"
+	"github.com/mzzsml/minerva/internal/model"
 )
 
 // Cnnect() handles the authentication and connection to the Postgres db.
 // Returns a *pgxpool.Pool object.
 func NewConnectionPool(dataSourceName string) *pgxpool.Pool {
-    // TODO: right now the connection string (to a test server) is hard-coded.
-    // Use a configuration file or an environment variable.
-    // https://pkg.go.dev/context#Background
-    pool, err := pgxpool.New(context.Background(), dataSourceName)
-    if err != nil {
-        log.Fatalf("ERROR: ConnectToDb: %s", err)
-    }
-    return pool
+	// TODO: right now the connection string (to a test server) is hard-coded.
+	// Use a configuration file or an environment variable.
+	// https://pkg.go.dev/context#Background
+	pool, err := pgxpool.New(context.Background(), dataSourceName)
+	if err != nil {
+		log.Fatalf("ERROR: ConnectToDb: %s", err)
+	}
+	return pool
 }
 
 type Db struct {
-    Pool *pgxpool.Pool
-    // so i can use like storage.db.Query('do stuff')...
+	Pool *pgxpool.Pool
+	// so i can use like storage.db.Query('do stuff')...
 }
 
-func NewDb (pool *pgxpool.Pool) *Db {
-   return &Db{pool} 
+func NewDb(pool *pgxpool.Pool) *Db {
+	return &Db{pool}
 }
-
 
 // altrimenti non compila
 func NewHost(h model.Host) {}
@@ -66,5 +65,3 @@ func NewHost(h model.Host) {}
 //        }
 //    }
 //}
-
-
