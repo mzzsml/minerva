@@ -33,19 +33,17 @@ func ParseFlags() {
 
     // First, if no flags are passed, use the config file.
     if flag.Parsed() && flag.NFlag() == 0 {
-        // Check wether the config file exists.
-        // If not, create it and populate it with default settings.
-        _, err := os.Stat("./etc/minerva/minerva.toml")
+        configFile, err := config.FindConfigFile()
         if err != nil && os.IsNotExist(err) {
-            var defaultConfig config.Config
-            defaultConfig = config.NewDefaultConfig()
-            defaultConfig.WriteToFile()
+            defaultConfig := config.NewDefaultConfig()
+            defaultConfig.CreateConfigFile()
+
             // At this point the file is created and populated.
             // We can assign the default values to the conf struct.
             conf.DataSourceName = defaultConfig.DataSourceName
             conf.ListenAddress = defaultConfig.ListenAddress
-        } else { // Parse the file.
-             err := conf.LoadFromFile("./etc/minerva/minerva.toml")
+        } else if configFile != "" { // Parse the file.
+             err := conf.LoadFromFile(configFile)
              if err != nil {
                  log.Fatalf("error: %s\n", err)
              }
