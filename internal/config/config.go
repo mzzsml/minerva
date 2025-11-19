@@ -18,7 +18,7 @@ type Config struct {
 	DataSourceName string `toml:"DataSourceName"`
 }
 
-func returnConfigFilePath() (string, error) {
+func ReturnConfigFilePath() (string, error) {
 	xdgDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -104,7 +104,7 @@ func (c *Config) LoadFromFile(filename string) error {
 // $XDG_CONFIG_HOME and &HOME/.config.
 // If none are found it return ErrNotExists.
 func FindConfigFile() (configFilePath string, err error) {
-	configFilePath, err = returnConfigFilePath()
+	configFilePath, err = ReturnConfigFilePath()
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +123,7 @@ func FindConfigFile() (configFilePath string, err error) {
 // not empty. Otherwise it creates it in $HOME/.config/.
 // See https://pkg.go.dev/os#UserConfigDir.
 func (c Config) CreateConfigFile() error {
-	configFilePath, err := returnConfigFilePath()
+	configFilePath, err := ReturnConfigFilePath()
 
 	_, err = FindConfigFile()
 	if err != nil && os.IsNotExist(err) {
