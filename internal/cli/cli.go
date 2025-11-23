@@ -1,71 +1,79 @@
 package cli
 
 import (
-	"flag"
-	"log"
-	"os"
+    "flag"
+    "os"
 
-	"github.com/mzzsml/minerva/internal/config"
-	"github.com/mzzsml/minerva/internal/http"
-	"github.com/mzzsml/minerva/internal/storage"
+    "github.com/mzzsml/minerva/internal/config"
+    "github.com/mzzsml/minerva/internal/http"
+    "github.com/mzzsml/minerva/internal/storage"
 )
 
 const (
-	listenAddrFlagHelp = "listen address."
-	dbConnStrFlagHelp  = "databse connection string."
+    listenAddrFlagHelp = "listen address."
+    dbConnStrFlagHelp  = "databse connection string."
 )
 
-func ParseFlags() {
-	var (
-		listenAddrFlag string
-		dbConnStrFlag  string
+// ParseFlags parses the command line flags provided.
+// If no flags are provided, then it uses the configuration files, located either in
+// $XDG_CONFIG_HOME or $HOME/.config/minerva.
+//
+// Note that flags have the priority on files, so, if they are provided and the files
+// already exist, ParseFlags ignores the files and uses the given command line flags.
+func ParseFlags() error {
+    var (
+        listenAddrFlag string
+        dbConnStrFlag  string
 
-		conf config.Config
-	)
+        conf config.Config
 
-	flag.StringVar(&listenAddrFlag, "listen", "", listenAddrFlagHelp)
-	flag.StringVar(&dbConnStrFlag, "db", "", dbConnStrFlagHelp)
-	flag.Parse()
+        db     *storage.Db
+        server http.Server
+    )
 
-	// For config files:
-	// If no flags are provided, then parse the config file.
-	// Flags have the priority on config files.
+    flag.StringVar(&listenAddrFlag, "listen", "", listenAddrFlagHelp)
+    flag.StringVar(&dbConnStrFlag, "db", "", dbConnStrFlagHelp)
+    flag.Parse()
 
-	// First, if no flags are passed, use the config file.
-	if flag.Parsed() && flag.NFlag() == 0 {
-		configFile, err := config.FindConfigFile()
-		if err != nil && os.IsNotExist(err) {
-			defaultConfig := config.NewDefaultConfig()
-			defaultConfig.CreateConfigFile()
+    // If no flags are given, use the config file.
+    if flag.Parsed() && flag.NFlag() == 0 {
+        configFile, err := config.FindConfigFile()
+        if err != nil && os.IsNotExist(err) {
+            // If no files are found, create a new one with default values.
+            // This is needed for the first time minerva is being run.
+            // NOTE: remove this part, so i don't have to hardcode any default
+            // settings?
+            defaultConfig := config.NewDefaultConfig()
+            defaultConfig.CreateConfigFile()
 
-			// At this point the file is created and populated.
-			// We can assign the default values to the conf struct.
-			conf.DataSourceName = defaultConfig.DataSourceName
-			conf.ListenAddress = defaultConfig.ListenAddress
-		} else if configFile != "" { // Parse the file.
-			err := conf.LoadFromFile(configFile)
-			if err != nil {
-				log.Fatalf("error: %s\n", err)
-			}
-		}
-	} else if flag.NFlag() > 0 {
-		conf.DataSourceName = dbConnStrFlag
-		conf.ListenAddress = listenAddrFlag
-	}
+            // At this point the new file is created and populated.
+            // We can assign the default values to the conf struct.
+            conf.DataSourceName = defaultConfig.DataSourceName
+            conf.ListenAddress = defaultConfig.ListenAddress
+        } else if configFile != "" {
+            // If the file exists, then parse it.
+            err := conf.LoadFromFile(configFile)
+            if err != nil {
+                return err
+            }
+        }
+    } else if flag.NFlag() > 0 {
+        // If flags are given, read their value and put it in conf.
+        conf.DataSourceName = dbConnStrFlag
+        conf.ListenAddress = listenAddrFlag
+    }
 
-	var (
-		db     *storage.Db
-		server http.Server
-	)
-	pool := storage.NewConnectionPool(conf.DataSourceName)
-	defer pool.Close()
-	db = storage.NewDb(pool)
+    pool := storage.NewConnectionPool(conf.DataSourceName)
+    defer pool.Close()
+    db = storage.NewDb(pool)
 
-	// The server struct is needed to pass the database access to the handlers
-	// later.
-	server = http.Server{
-		Addr:  conf.ListenAddress,
-		Store: db,
-	}
-	startDeamon(server)
+    // The server struct is needed to pass the database access to the handlers
+    // later.
+    server = http.Server{
+        Addr:  conf.ListenAddress,
+        Store: db,
+    }
+    startDeamon(server)
+
+    return nil
 }
