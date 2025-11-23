@@ -107,7 +107,7 @@ func (c *Config) LoadFromFile(filename string) error {
 
 // FindConfigFile simply looks for Minerva configuration files in
 // $XDG_CONFIG_HOME and &HOME/.config.
-// If none are found it return ErrNotExists.
+// If none are found it returns a ErrNotExists.
 func FindConfigFile() (configFilePath string, err error) {
     configFilePath, err = ReturnConfigFilePath()
     if err != nil {
@@ -119,8 +119,7 @@ func FindConfigFile() (configFilePath string, err error) {
     if err != nil && os.IsNotExist(err) {
         return "", err
     }
-    // If file exists, fileInfo will be populated.
-    // We can return configFilePath (this was for an "if" check i've deleted)
+    // Otherwise, if the file exists, fileInfo will be populated.
     return configFilePath, err
 }
 
