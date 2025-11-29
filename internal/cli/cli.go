@@ -39,17 +39,8 @@ func ParseFlags() error {
     if flag.Parsed() && flag.NFlag() == 0 {
         configFile, err := config.FindConfigFile()
         if err != nil && os.IsNotExist(err) {
-            // If no files are found, create a new one with default values.
-            // This is needed for the first time minerva is being run.
-            // NOTE: remove this part, so i don't have to hardcode any default
-            // settings?
-            defaultConfig := config.NewDefaultConfig()
-            defaultConfig.CreateConfigFile()
-
-            // At this point the new file is created and populated.
-            // We can assign the default values to the conf struct.
-            conf.DataSourceName = defaultConfig.DataSourceName
-            conf.ListenAddress = defaultConfig.ListenAddress
+            // NOTE: for now just return an error.
+            return err
         } else if configFile != "" {
             // If the file exists, then parse it.
             err := conf.LoadFromFile(configFile)
