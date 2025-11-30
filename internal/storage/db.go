@@ -1,38 +1,75 @@
 package storage
 
 import (
-	"context"
-	"log"
+    "context"
+    "log"
+    "net"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+    "github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/mzzsml/minerva/internal/model"
+    //"github.com/mzzsml/minerva/internal/model"
+    "github.com/mzzsml/nparse"
 )
 
 // Cnnect() handles the authentication and connection to the Postgres db.
 // Returns a *pgxpool.Pool object.
 func NewConnectionPool(dataSourceName string) *pgxpool.Pool {
-	// TODO: right now the connection string (to a test server) is hard-coded.
-	// Use a configuration file or an environment variable.
-	// https://pkg.go.dev/context#Background
-	pool, err := pgxpool.New(context.Background(), dataSourceName)
-	if err != nil {
-		log.Fatalf("ERROR: ConnectToDb: %s", err)
-	}
-	return pool
+    // https://pkg.go.dev/context#Background
+    pool, err := pgxpool.New(context.Background(), dataSourceName)
+    if err != nil {
+        log.Fatalf("ERROR: ConnectToDb: %s", err)
+    }
+    return pool
 }
 
 type Db struct {
-	Pool *pgxpool.Pool
-	// so i can use like storage.db.Query('do stuff')...
+    Pool *pgxpool.Pool // so i can use like storage.db.Query('do stuff')...
 }
 
 func NewDb(pool *pgxpool.Pool) *Db {
-	return &Db{pool}
+    return &Db{pool}
 }
 
 // altrimenti non compila
-func NewHost(h model.Host) {}
+func (d Db) InsertHost(n *nparse.NmapScan) {
+    q := `INSERT INTO host (address) VALUES ($1) RETURNING id;`
+    var id int
+
+    for _, h := range n.Hosts {
+        for _, a := range h.Addrs {
+            if a.AddrType == "ipv4" {
+                err := d.Pool.QueryRow(context.Background(), q, a.Addr).Scan(&id)
+                if err != nil {
+                    log.Printf("error in Scan(): %s\n", err)
+                }
+                log.Printf("%d\n", id)
+            }
+        }
+    }
+}
+
+//func (d Db) GetHosts() (hosts []nparse.Host) {
+func (d Db) GetHosts() {
+    q := `SELECT address FROM host;`
+    
+    //var h nparse.Host
+    rows, err := d.Pool.Query(context.Background(), q)
+    if err != nil {
+        log.Printf("error in retrieving hosts: %s\n", err)
+    }
+    defer rows.Close()
+    var addr net.IP
+    for rows.Next() {
+        //err = rows.Scan(&h.Addrs[0].Addr)
+        err = rows.Scan(&addr)
+        if err != nil {
+            log.Printf("error: %s\n", err)
+        }
+        log.Printf("%s\n", addr.String())
+        //hosts = append(hosts, h)
+    }
+    //return
+}
 
 // NewHost handles the insertion of a new host and its details to the db.
 //func NewHost(h model.Host) {

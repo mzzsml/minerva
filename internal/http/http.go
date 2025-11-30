@@ -10,6 +10,8 @@ import (
     "strings"
     "mime/multipart"
 
+    "github.com/mzzsml/nparse"
+
     "github.com/mzzsml/minerva/internal/storage"
 )
 
@@ -23,7 +25,7 @@ func (s *Server) Start() {
 
     mux.HandleFunc("/{$}", s.handleIndex)
     mux.HandleFunc("POST /upload", s.handleUpload)
-    mux.HandleFunc("POST /api/scan/{$}", handleNewScan) // faccio una post, con il body che e' il json, fa il parsing e mette i risultati in un db
+    mux.HandleFunc("GET /hosts/{$}", s.handleGetHosts)
     mux.HandleFunc("GET /api/host/{hostAddr}", s.handleGetHostDetails)
 
     server := &http.Server{
@@ -70,22 +72,16 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
             if err != nil {
                 log.Printf("error: %s\n", err)
             }
-            fmt.Fprintf(w, "%s\n", slurp)
+            nmapScan, _ := nparse.NewNmapScan(slurp)
+            fmt.Fprintf(w, "%v\n", nmapScan)
+
+            s.Store.InsertHost(nmapScan)
         }
     }
+}
 
-    //r.ParseMultipartForm(10 << 20)
-
-    //file, _, err := r.FormFile("file")
-    //if err != nil {
-    //    http.Error(w, "Error retrieving the file", http.StatusBadRequest)
-    //    log.Printf("%s\n", err)
-    //    return
-    //}
-    //defer file.Close()
-    //var f *os.File
-    //f.ReadFrom(file)
-    //fmt.Fprintf(w, "%v\n", f)
+func (s Server) handleGetHosts(w http.ResponseWriter, r *http.Request) {
+    s.Store.GetHosts()
 }
 
 func (s *Server) handleGetHostDetails(w http.ResponseWriter, r *http.Request) {
