@@ -73,9 +73,15 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
                 log.Printf("error: %s\n", err)
             }
             nmapScan, _ := nparse.NewNmapScan(slurp)
-            fmt.Fprintf(w, "%v\n", nmapScan)
-
-            s.Store.InsertHost(nmapScan)
+            err = s.Store.InsertHosts(nmapScan)
+            if err != nil {
+                fmt.Fprintf(w, "Error in inserting new host in db: %s\n", err)
+            } else {
+                // AS OF TODAY 03/12/25 IT RETURNS NO ERROR IF HOST ALREADY
+                // EXISTS, SO IT WILL PRINT UPLOADED SUCC... EVEN IF IT DIDNT
+                // ACTUALLY UPLOAD IT.
+                fmt.Fprintf(w, "Uploaded successfully.\n")
+            }
         }
     }
 }
