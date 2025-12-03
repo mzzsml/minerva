@@ -81,7 +81,8 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) handleGetHosts(w http.ResponseWriter, r *http.Request) {
-    s.Store.GetHosts()
+    hosts := s.Store.GetHosts()
+    fmt.Fprintf(w, "%v\n", hosts)
 }
 
 func (s *Server) handleGetHostDetails(w http.ResponseWriter, r *http.Request) {

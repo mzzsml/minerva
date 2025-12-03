@@ -3,11 +3,10 @@ package storage
 import (
     "context"
     "log"
-    "net"
+    //"net"
 
     "github.com/jackc/pgx/v5/pgxpool"
 
-    //"github.com/mzzsml/minerva/internal/model"
     "github.com/mzzsml/nparse"
 )
 
@@ -30,45 +29,111 @@ func NewDb(pool *pgxpool.Pool) *Db {
     return &Db{pool}
 }
 
-// altrimenti non compila
 func (d Db) InsertHost(n *nparse.NmapScan) {
-    q := `INSERT INTO host (address) VALUES ($1) RETURNING id;`
+    // Cant use parameters in column header, so we need to do a different
+    // insetion per address type (ipv4 and mac).
+    qi := `INSERT INTO host (ipv4, vendor) VALUES ($1, $2) RETURNING id;`
+    qm := `INSERT INTO host (mac, vendor) VALUES ($1, $2) RETURNING id;`
     var id int
+    var ids []int
 
     for _, h := range n.Hosts {
         for _, a := range h.Addrs {
             if a.AddrType == "ipv4" {
-                err := d.Pool.QueryRow(context.Background(), q, a.Addr).Scan(&id)
+                err := d.Pool.QueryRow(
+                    context.Background(),
+                    qi,
+                    a.Addr,
+                    a.Vendor,
+                ).Scan(&id)
                 if err != nil {
-                    log.Printf("error in Scan(): %s\n", err)
+                    log.Printf("error in InsertHost(): %s\n", err)
                 }
-                log.Printf("%d\n", id)
+                ids = append(ids, id)
+            }
+            if a.AddrType == "mac" {
+                err := d.Pool.QueryRow(
+                    context.Background(),
+                    qm,
+                    a.Addr,
+                    a.Vendor,
+                ).Scan(&id)
+                if err != nil {
+                    log.Printf("error in InsertHost(): %s\n", err)
+                }
+                ids = append(ids, id)
             }
         }
     }
 }
 
-//func (d Db) GetHosts() (hosts []nparse.Host) {
-func (d Db) GetHosts() {
-    q := `SELECT address FROM host;`
-    
-    //var h nparse.Host
+func (d Db) GetPorts(hostId int) []nparse.Port {
+    var (
+        p nparse.Port
+        ports []nparse.Port
+    )
+
+    q := `SELECT
+            port_num,
+            state,
+            reason,
+            service,
+            COALESCE(version, ''),
+            COALESCE(extrainfo, '')
+          FROM
+            port
+          WHERE host_id = $1;`
+
+    rows, err := d.Pool.Query(context.Background(), q, hostId)
+    if err != nil {
+        log.Printf("error in reading ports from DB: %s\n", err)
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        err := rows.Scan(
+            &p.PortId,
+            &p.State.State,
+            &p.State.Reason,
+            &p.Service.Name,
+            &p.Service.Version,
+            &p.Service.Extrainfo,
+        )
+        if err != nil {
+            log.Printf("errror: %s\n", err)
+        }
+        ports = append(ports, p)
+    }
+    return ports
+}
+
+// GetHosts queries the `host` table and returns a list of hosts strings containing
+// all the IPv4 addresses in it.
+func (d Db) GetHosts() []nparse.Host {
+    var (
+        hostId int
+        host nparse.Host
+        hosts []nparse.Host
+    )
+
+    q := `SELECT id FROM host;`
     rows, err := d.Pool.Query(context.Background(), q)
     if err != nil {
         log.Printf("error in retrieving hosts: %s\n", err)
     }
     defer rows.Close()
-    var addr net.IP
+
     for rows.Next() {
-        //err = rows.Scan(&h.Addrs[0].Addr)
-        err = rows.Scan(&addr)
+        err = rows.Scan(&hostId)
         if err != nil {
             log.Printf("error: %s\n", err)
         }
-        log.Printf("%s\n", addr.String())
-        //hosts = append(hosts, h)
+        host = nparse.Host{
+            Ports: d.GetPorts(hostId),
+        }
+        hosts = append(hosts, host)
     }
-    //return
+    return hosts
 }
 
 // NewHost handles the insertion of a new host and its details to the db.
