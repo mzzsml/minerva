@@ -88,7 +88,9 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 func (s Server) handleGetHosts(w http.ResponseWriter, r *http.Request) {
     hosts := s.Store.GetHosts()
-    fmt.Fprintf(w, "%v\n", hosts)
+    for _, h := range hosts {
+        fmt.Fprintf(w, "host id: %d, host address: %s\n", h.Id, h.Ipv4.String())
+    }
 }
 
 func (s *Server) handleGetHostDetails(w http.ResponseWriter, r *http.Request) {

@@ -3,7 +3,7 @@ package storage
 import (
     "context"
     "log"
-    //"net"
+    "net"
 
     "github.com/jackc/pgx/v5/pgxpool"
 
@@ -163,16 +163,17 @@ func (d Db) GetPorts(hostId int) []nparse.Port {
     return ports
 }
 
-// GetHosts queries the `host` table and returns a list of hosts strings containing
-// all the IPv4 addresses in it.
-func (d Db) GetHosts() []nparse.Host {
-    var (
-        hostId int
-        host nparse.Host
-        hosts []nparse.Host
-    )
+type Host struct {
+    Id int
+    Ipv4 net.IP
+}
+// GetHosts queries the `host` table and returns a list of Host (which is
+// different than nparse.Host, and it just holds the hosts' ids and ipv4 addresses).
+func (d Db) GetHosts() []Host {
+    var host Host
+    var hosts []Host
 
-    q := `SELECT id FROM host;`
+    q := `SELECT id, ipv4 FROM host;`
     rows, err := d.Pool.Query(context.Background(), q)
     if err != nil {
         log.Printf("error in retrieving hosts: %s\n", err)
@@ -180,12 +181,9 @@ func (d Db) GetHosts() []nparse.Host {
     defer rows.Close()
 
     for rows.Next() {
-        err = rows.Scan(&hostId)
+        err = rows.Scan(&host.Id, &host.Ipv4)
         if err != nil {
             log.Printf("error: %s\n", err)
-        }
-        host = nparse.Host{
-            Ports: d.GetPorts(hostId),
         }
         hosts = append(hosts, host)
     }
