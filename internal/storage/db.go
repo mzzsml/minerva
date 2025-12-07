@@ -123,7 +123,7 @@ func (d Db) InsertHosts(n *nparse.NmapScan) error {
 
 // GetPorts queries the db and gets every port for a provided host.
 // It takes the host ID as input and returns and array of nmap.Port.
-func (d Db) GetPorts(hostId int) []nparse.Port {
+func (d Db) GetPortsByHostId(hostId int) []nparse.Port {
     var (
         p nparse.Port
         ports []nparse.Port
@@ -164,60 +164,66 @@ func (d Db) GetPorts(hostId int) []nparse.Port {
 }
 
 type Host struct {
-    Id int
-    Ipv4 net.IP
+    Id int `json:"id"`
+    Ipv4 net.IP `json:"ipv4"`
 }
 // GetHosts queries the `host` table and returns a list of Host (which is
 // different than nparse.Host, and it just holds the hosts' ids and ipv4 addresses).
-func (d Db) GetHosts() []Host {
+func (d Db) GetHosts() ([]Host, error) {
     var host Host
     var hosts []Host
 
     q := `SELECT id, ipv4 FROM host;`
     rows, err := d.Pool.Query(context.Background(), q)
     if err != nil {
-        log.Printf("error in retrieving hosts: %s\n", err)
+        return nil, err
     }
     defer rows.Close()
 
     for rows.Next() {
         err = rows.Scan(&host.Id, &host.Ipv4)
         if err != nil {
-            log.Printf("error: %s\n", err)
+            return nil, err
         }
         hosts = append(hosts, host)
     }
-    return hosts
+    return hosts, nil
 }
 
-// NewHost handles the insertion of a new host and its details to the db.
-//func NewHost(h model.Host) {
-//    // First connect to the db.
-//    pool := ConnectToDb()
-//    // After we're done, close the connection.
-//    defer pool.Close()
-//
-//    var hostId int
-//    // Insert the new host into the `host` table.
-//    // If the operation is successful, Postgres will return the new host's id.
-//    // We're gonna use this id to insert the ports to the `port` table, so that
-//    // the entries are linked.
-//    // TODO: use prepared statements?
-//    row := pool.QueryRow(context.Background(), "INSERT INTO host (address) VALUES ($1) RETURNING id", h.Addr)
-//    err := row.Scan(&hostId)
-//    if err != nil {
-//        // TODO: instead of closing the application, we should send something like http error 500,
-//        // and keep this process running
-//        log.Fatal(err)
-//    }
-//
-//    // Now insert the ports.
-//    // Because ports are more than one, we have to cycle through them
-//    // TODO: use prepared statements?
-//    for _, port := range h.Ports {
-//        _, err := pool.Exec(context.Background(), "INSERT INTO port (host_id, port_num, state, reason, service, version, extrainfo) VALUES ($1, $2, $3, $4, $5, $6, $7)", hostId, port.PortId, port.State, port.Reason, port.Service, port.Version, port.Extrainfo)
-//        if err != nil {
-//            log.Fatal(err)
-//        }
-//    }
-//}
+func (d Db) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
+    var h nparse.Host 
+    var ports []nparse.Port
+    var id int
+    var mac net.HardwareAddr
+    var vendor string
+    var hostname string
+
+    q := `SELECT id, mac, vendor, hostname FROM host WHERE ipv4 = $1;`
+    
+    err := d.Pool.QueryRow(context.Background(), q, addr).Scan(&id, &mac, &vendor, &hostname)
+    if err != nil {
+        return h, err
+    }
+
+    ports = d.GetPortsByHostId(id)
+    
+    addrIPv4 := nparse.Address{
+        Addr: addr,
+        AddrType: "ipv4",
+    }
+    addrMac := nparse.Address{
+        Addr: mac.String(),
+        AddrType: "mac",
+        Vendor: vendor,
+    }
+    addrs := []nparse.Address{addrIPv4, addrMac}
+
+    hostnames := []string{hostname}
+
+    h = nparse.Host{
+        Addrs: addrs,
+        Hostnames: hostnames,
+        Ports: ports,
+    }
+    return h, nil
+}

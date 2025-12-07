@@ -9,6 +9,7 @@ import (
     "io"
     "strings"
     "mime/multipart"
+    "encoding/json"
 
     "github.com/mzzsml/nparse"
 
@@ -26,7 +27,7 @@ func (s *Server) Start() {
     mux.HandleFunc("/{$}", s.handleIndex)
     mux.HandleFunc("POST /upload", s.handleUpload)
     mux.HandleFunc("GET /hosts/{$}", s.handleGetHosts)
-    mux.HandleFunc("GET /api/host/{hostAddr}", s.handleGetHostDetails)
+    mux.HandleFunc("GET /hosts/{addr}", s.handleGetHostDetails)
 
     server := &http.Server{
         Addr:    s.Addr,
@@ -65,21 +66,27 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
                 return
             }
             if err != nil {
+                w.WriteHeader(http.StatusInternalServerError)
                 log.Printf("error: %s\n", err)
                 return
             }
             slurp, err := io.ReadAll(p)
             if err != nil {
+                w.WriteHeader(http.StatusInternalServerError)
                 log.Printf("error: %s\n", err)
+                return
             }
             nmapScan, _ := nparse.NewNmapScan(slurp)
             err = s.Store.InsertHosts(nmapScan)
             if err != nil {
+                w.WriteHeader(http.StatusInternalServerError)
                 fmt.Fprintf(w, "Error in inserting new host in db: %s\n", err)
+                return
             } else {
                 // AS OF TODAY 03/12/25 IT RETURNS NO ERROR IF HOST ALREADY
                 // EXISTS, SO IT WILL PRINT UPLOADED SUCC... EVEN IF IT DIDNT
                 // ACTUALLY UPLOAD IT.
+                w.WriteHeader(http.StatusOK)
                 fmt.Fprintf(w, "Uploaded successfully.\n")
             }
         }
@@ -87,19 +94,27 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) handleGetHosts(w http.ResponseWriter, r *http.Request) {
-    hosts := s.Store.GetHosts()
-    for _, h := range hosts {
-        fmt.Fprintf(w, "host id: %d, host address: %s\n", h.Id, h.Ipv4.String())
+    hosts, err := s.Store.GetHosts()
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        fmt.Fprintf(w, "error: %s\n", err)
+        return
     }
+
+    m, _ := json.Marshal(hosts)
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintf(w, "%s\n", m)
 }
 
 func (s *Server) handleGetHostDetails(w http.ResponseWriter, r *http.Request) {
-    addr := r.PathValue("hostAddr")
-
-    res, err := s.Store.GetHostDetails(addr)
+    host, err := s.Store.GetHostInfoByIPv4(r.PathValue("addr"))
     if err != nil {
-        log.Fatalf("error: handleGetHostDetails (new version): %s", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        fmt.Fprintf(w, "error: %s\n", err)
+        return
     }
 
-    fmt.Fprintf(w, "%v\n", res)
+    h, _ := json.Marshal(host)
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintf(w, "%s\n", h)
 }
