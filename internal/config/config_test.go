@@ -1,44 +1,44 @@
 package config
 
 import (
-    "testing"
-    "os"
-    "path/filepath"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 const (
-    testPath = "/tmp/minerva-test"
+	testPath = "/tmp/minerva-test"
 )
 
 func TestReturnConfigFilePath(t *testing.T) {
-    want := "/home/samuele/.config/minerva/minerva.toml"
+	want := "/home/samuele/.config/minerva/minerva.toml"
 
-    fp, err := ReturnConfigFilePath()
+	fp, err := ReturnConfigFilePath()
 
-    if want != fp || err != nil {
-        t.Errorf("ReturnConfigFilePath() returns %s, %v; want %s, nil", fp, err, want)
-    }
+	if want != fp || err != nil {
+		t.Errorf("ReturnConfigFilePath() returns %s, %v; want %s, nil", fp, err, want)
+	}
 }
 
 func TestNewDefaultConfig(t *testing.T) {
-    want := Config{
-        ListenAddress: ":8080",
-        DataSourceName: "user=samuele password=asd host=192.168.1.48 dbname=minerva sslmode=disable",
-    }
-    df := NewDefaultConfig()
+	want := Config{
+		ListenAddress:  ":8080",
+		DataSourceName: "user=samuele password=asd host=192.168.1.48 dbname=minerva sslmode=disable",
+	}
+	df := NewDefaultConfig()
 
-    if df != want {
-        t.Errorf("NewDEfaultConfig() returns %v; want %v", df, want)
-    }
+	if df != want {
+		t.Errorf("NewDEfaultConfig() returns %v; want %v", df, want)
+	}
 }
 
 func TestMkdir(t *testing.T) {
-    testDir := filepath.Join(testPath, "test-mkdir")
-    err := Mkdir(testDir)
-    dirCreated, _ := os.Stat(testDir)
-    if dirCreated == nil || err != nil {
-        t.Errorf("Mkdir did not create test directory (%s), got error %v", testDir, err)
-    }
+	testDir := filepath.Join(testPath, "test-mkdir")
+	err := Mkdir(testDir)
+	dirCreated, _ := os.Stat(testDir)
+	if dirCreated == nil || err != nil {
+		t.Errorf("Mkdir did not create test directory (%s), got error %v", testDir, err)
+	}
 }
 
 //// Testare creazione directory duplicata.
@@ -59,59 +59,59 @@ func TestMkdir(t *testing.T) {
 //}
 
 func TestWriteToFile(t *testing.T) {
-    var c Config
+	var c Config
 
-    c = Config{
-        ListenAddress: "asd",
-        DataSourceName: "qwe",
-    }
+	c = Config{
+		ListenAddress:  "asd",
+		DataSourceName: "qwe",
+	}
 
-    path := filepath.Join(testPath, "test-file-write")
-    err := c.WriteToFile(path)
+	path := filepath.Join(testPath, "test-file-write")
+	err := c.WriteToFile(path)
 
-    if err != nil {
-        t.Errorf("TestWriteToFile: could not create te file: %s", err)
-    }
+	if err != nil {
+		t.Errorf("TestWriteToFile: could not create te file: %s", err)
+	}
 }
 
-func TestLoadFromFile (t *testing.T) {
-    var c Config
-    
-    path := filepath.Join(testPath, "test-file-read.toml")
-    err := c.LoadFromFile(path)
+func TestLoadFromFile(t *testing.T) {
+	var c Config
 
-    if err != nil {
-        t.Errorf("TestLoadFromFile: error in reading file (%s) (%s)", path, err)
-    }
+	path := filepath.Join(testPath, "test-file-read.toml")
+	err := c.LoadFromFile(path)
+
+	if err != nil {
+		t.Errorf("TestLoadFromFile: error in reading file (%s) (%s)", path, err)
+	}
 }
 
-func TestLoadFromFileNonExisting (t *testing.T) {
-    var c Config
-    
-    path := filepath.Join(testPath, "test-file-read-non-existing.toml" )
-    err := c.LoadFromFile(path)
+func TestLoadFromFileNonExisting(t *testing.T) {
+	var c Config
 
-    if err == nil {
-        t.Errorf("TestLoadFromFile: error is nil, and it shouldn't (%s)", err)
-    }
+	path := filepath.Join(testPath, "test-file-read-non-existing.toml")
+	err := c.LoadFromFile(path)
+
+	if err == nil {
+		t.Errorf("TestLoadFromFile: error is nil, and it shouldn't (%s)", err)
+	}
 }
 
-func TestLoadFromFileEmpty (t *testing.T) {
-    var c Config
-    
-    path := filepath.Join(testPath, "test-file-read-empy.toml")
-    err := c.LoadFromFile(path)
+func TestLoadFromFileEmpty(t *testing.T) {
+	var c Config
 
-    if err == nil {
-        t.Errorf("error is nil, and it shouldn't (%s)", err)
-    }
+	path := filepath.Join(testPath, "test-file-read-empy.toml")
+	err := c.LoadFromFile(path)
+
+	if err == nil {
+		t.Errorf("error is nil, and it shouldn't (%s)", err)
+	}
 }
 
 func TestFindConfigFile(t *testing.T) {
-    _, err := FindConfigFile()
-    if err != nil {
-        t.Errorf("error should be nil; got (%s)", err)
-    }
+	_, err := FindConfigFile()
+	if err != nil {
+		t.Errorf("error should be nil; got (%s)", err)
+	}
 }
 
 // NOTE: have to come up on how to test this, since it has to create a new

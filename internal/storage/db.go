@@ -1,36 +1,36 @@
 package storage
 
 import (
-    "context"
-    "log"
-    "net"
+	"context"
+	"log"
+	"net"
 
-    "github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 
-    "github.com/mzzsml/nparse"
+	"github.com/mzzsml/nparse"
 )
 
 // Cnnect() handles the authentication and connection to the Postgres db.
 // Returns a *pgxpool.Pool object.
 func NewConnectionPool(dataSourceName string) *pgxpool.Pool {
-    // https://pkg.go.dev/context#Background
-    pool, err := pgxpool.New(context.Background(), dataSourceName)
-    if err != nil {
-        log.Fatalf("ERROR: ConnectToDb: %s", err)
-    }
-    return pool
+	// https://pkg.go.dev/context#Background
+	pool, err := pgxpool.New(context.Background(), dataSourceName)
+	if err != nil {
+		log.Fatalf("ERROR: ConnectToDb: %s", err)
+	}
+	return pool
 }
 
 // Db holds the connecton pool.
 // Using this struct it's possible to query the db without the need of
 // reautentication every time.
 type Db struct {
-    Pool *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
 // NewDb creates a new Db instance.
 func NewDb(pool *pgxpool.Pool) *Db {
-    return &Db{pool}
+	return &Db{pool}
 }
 
 // BEFORE INSERTING PORTS, CHECK WETHER THEY ALREADY EXIST
@@ -40,96 +40,96 @@ func (d Db) isPortAlreadyExisting() {}
 // host.
 // It takes the host id and a nparse.Port as input.
 func (d Db) InsertPorts(hostId int, p nparse.Port) {
-    q := `INSERT INTO
+	q := `INSERT INTO
             port (host_id, protocol, port_num, state, reason, service, product, version, extrainfo)
             values ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
 
-    _ = d.Pool.QueryRow(
-        context.Background(),
-        q,
-        hostId,
-        p.Protocol,
-        p.PortId,
-        p.State.State,
-        p.State.Reason,
-        p.Service.Name,
-        p.Service.Product,
-        p.Service.Version,
-        p.Service.Extrainfo,
-    )
+	_ = d.Pool.QueryRow(
+		context.Background(),
+		q,
+		hostId,
+		p.Protocol,
+		p.PortId,
+		p.State.State,
+		p.State.Reason,
+		p.Service.Name,
+		p.Service.Product,
+		p.Service.Version,
+		p.Service.Extrainfo,
+	)
 }
 
 func (d Db) IsHostAlreadyExisting(ipv4 string) bool {
-    var id int
+	var id int
 
-    q := `SELECT id FROM host WHERE ipv4 = $1;`
+	q := `SELECT id FROM host WHERE ipv4 = $1;`
 
-    err := d.Pool.QueryRow(context.Background(), q, ipv4).Scan(&id)
-    if err == nil && id != 0 {
-        return true
-    }
-    return false
+	err := d.Pool.QueryRow(context.Background(), q, ipv4).Scan(&id)
+	if err == nil && id != 0 {
+		return true
+	}
+	return false
 }
 
 func (d Db) InsertHosts(n *nparse.NmapScan) error {
-    var id int
+	var id int
 
-    q := `INSERT INTO host (ipv4, mac, vendor, hostname) VALUES ($1, $2, $3, $4) RETURNING id;`
+	q := `INSERT INTO host (ipv4, mac, vendor, hostname) VALUES ($1, $2, $3, $4) RETURNING id;`
 
-    // tmphost temporary holds the information of an host, in simpler form, in
-    // ordert to then add it into the database.
-    type tmphost struct {
-        ipv4 string
-        mac string
-        vendor string
-        hostname string
-    }
+	// tmphost temporary holds the information of an host, in simpler form, in
+	// ordert to then add it into the database.
+	type tmphost struct {
+		ipv4     string
+		mac      string
+		vendor   string
+		hostname string
+	}
 
-    for _, h := range n.Hosts {
-        var th tmphost
-        for _, a := range h.Addrs {
-            if a.AddrType == "ipv4" {
-                th.ipv4 = a.Addr
-                continue
-            }
-            if a.AddrType == "mac" {
-                th.mac = a.Addr
-                th.vendor = a.Vendor
-                continue
-            }
-        }
-        if !d.IsHostAlreadyExisting(th.ipv4) {
-            err := d.Pool.QueryRow(
-                context.Background(),
-                q,
-                th.ipv4,
-                th.mac,
-                th.vendor,
-                th.hostname,
-            ).Scan(&id)
-            if err != nil {
-                return err
-            }
-            for _, p := range h.Ports {
-                d.InsertPorts(id, p)
-            }
-        } else {
-            // TODO: ERROR HOST ALREADY EXISTS.
-            return nil
-        }
-    }
-    return nil
+	for _, h := range n.Hosts {
+		var th tmphost
+		for _, a := range h.Addrs {
+			if a.AddrType == "ipv4" {
+				th.ipv4 = a.Addr
+				continue
+			}
+			if a.AddrType == "mac" {
+				th.mac = a.Addr
+				th.vendor = a.Vendor
+				continue
+			}
+		}
+		if !d.IsHostAlreadyExisting(th.ipv4) {
+			err := d.Pool.QueryRow(
+				context.Background(),
+				q,
+				th.ipv4,
+				th.mac,
+				th.vendor,
+				th.hostname,
+			).Scan(&id)
+			if err != nil {
+				return err
+			}
+			for _, p := range h.Ports {
+				d.InsertPorts(id, p)
+			}
+		} else {
+			// TODO: ERROR HOST ALREADY EXISTS.
+			return nil
+		}
+	}
+	return nil
 }
 
 // GetPorts queries the db and gets every port for a provided host.
 // It takes the host ID as input and returns and array of nmap.Port.
 func (d Db) GetPortsByHostId(hostId int) []nparse.Port {
-    var (
-        p nparse.Port
-        ports []nparse.Port
-    )
+	var (
+		p     nparse.Port
+		ports []nparse.Port
+	)
 
-    q := `SELECT
+	q := `SELECT
             port_num,
             state,
             reason,
@@ -140,90 +140,91 @@ func (d Db) GetPortsByHostId(hostId int) []nparse.Port {
             port
           WHERE host_id = $1;`
 
-    rows, err := d.Pool.Query(context.Background(), q, hostId)
-    if err != nil {
-        log.Printf("error in reading ports from DB: %s\n", err)
-    }
-    defer rows.Close()
+	rows, err := d.Pool.Query(context.Background(), q, hostId)
+	if err != nil {
+		log.Printf("error in reading ports from DB: %s\n", err)
+	}
+	defer rows.Close()
 
-    for rows.Next() {
-        err := rows.Scan(
-            &p.PortId,
-            &p.State.State,
-            &p.State.Reason,
-            &p.Service.Name,
-            &p.Service.Version,
-            &p.Service.Extrainfo,
-        )
-        if err != nil {
-            log.Printf("errror: %s\n", err)
-        }
-        ports = append(ports, p)
-    }
-    return ports
+	for rows.Next() {
+		err := rows.Scan(
+			&p.PortId,
+			&p.State.State,
+			&p.State.Reason,
+			&p.Service.Name,
+			&p.Service.Version,
+			&p.Service.Extrainfo,
+		)
+		if err != nil {
+			log.Printf("errror: %s\n", err)
+		}
+		ports = append(ports, p)
+	}
+	return ports
 }
 
 type Host struct {
-    Id int `json:"id"`
-    Ipv4 net.IP `json:"ipv4"`
+	Id   int    `json:"id"`
+	Ipv4 net.IP `json:"ipv4"`
 }
+
 // GetHosts queries the `host` table and returns a list of Host (which is
 // different than nparse.Host, and it just holds the hosts' ids and ipv4 addresses).
 func (d Db) GetHosts() ([]Host, error) {
-    var host Host
-    var hosts []Host
+	var host Host
+	var hosts []Host
 
-    q := `SELECT id, ipv4 FROM host;`
-    rows, err := d.Pool.Query(context.Background(), q)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	q := `SELECT id, ipv4 FROM host;`
+	rows, err := d.Pool.Query(context.Background(), q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    for rows.Next() {
-        err = rows.Scan(&host.Id, &host.Ipv4)
-        if err != nil {
-            return nil, err
-        }
-        hosts = append(hosts, host)
-    }
-    return hosts, nil
+	for rows.Next() {
+		err = rows.Scan(&host.Id, &host.Ipv4)
+		if err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, host)
+	}
+	return hosts, nil
 }
 
 func (d Db) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
-    var h nparse.Host 
-    var ports []nparse.Port
-    var id int
-    var mac net.HardwareAddr
-    var vendor string
-    var hostname string
+	var h nparse.Host
+	var ports []nparse.Port
+	var id int
+	var mac net.HardwareAddr
+	var vendor string
+	var hostname string
 
-    q := `SELECT id, mac, vendor, hostname FROM host WHERE ipv4 = $1;`
-    
-    err := d.Pool.QueryRow(context.Background(), q, addr).Scan(&id, &mac, &vendor, &hostname)
-    if err != nil {
-        return h, err
-    }
+	q := `SELECT id, mac, vendor, hostname FROM host WHERE ipv4 = $1;`
 
-    ports = d.GetPortsByHostId(id)
-    
-    addrIPv4 := nparse.Address{
-        Addr: addr,
-        AddrType: "ipv4",
-    }
-    addrMac := nparse.Address{
-        Addr: mac.String(),
-        AddrType: "mac",
-        Vendor: vendor,
-    }
-    addrs := []nparse.Address{addrIPv4, addrMac}
+	err := d.Pool.QueryRow(context.Background(), q, addr).Scan(&id, &mac, &vendor, &hostname)
+	if err != nil {
+		return h, err
+	}
 
-    hostnames := []string{hostname}
+	ports = d.GetPortsByHostId(id)
 
-    h = nparse.Host{
-        Addrs: addrs,
-        Hostnames: hostnames,
-        Ports: ports,
-    }
-    return h, nil
+	addrIPv4 := nparse.Address{
+		Addr:     addr,
+		AddrType: "ipv4",
+	}
+	addrMac := nparse.Address{
+		Addr:     mac.String(),
+		AddrType: "mac",
+		Vendor:   vendor,
+	}
+	addrs := []nparse.Address{addrIPv4, addrMac}
+
+	hostnames := []string{hostname}
+
+	h = nparse.Host{
+		Addrs:     addrs,
+		Hostnames: hostnames,
+		Ports:     ports,
+	}
+	return h, nil
 }
