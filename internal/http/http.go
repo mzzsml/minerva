@@ -18,7 +18,7 @@ import (
 
 type Server struct {
 	Addr  string
-	Store *storage.Db
+	Store *storage.DB
 }
 
 func (s *Server) Start() {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"flag"
+	"log"
 	"os"
 
 	"github.com/mzzsml/minerva/internal/config"
@@ -27,7 +28,7 @@ func ParseFlags() error {
 
 		conf config.Config
 
-		db     *storage.Db
+		db     *storage.DB
 		server http.Server
 	)
 
@@ -54,7 +55,10 @@ func ParseFlags() error {
 		conf.ListenAddress = listenAddrFlag
 	}
 
-	pool := storage.NewConnectionPool(conf.DataSourceName)
+	pool, err := storage.NewConnectionPool(conf.DataSourceName)
+	if err != nil {
+		log.Fatalf("error: %s\n", err)
+	}
 	defer pool.Close()
 	db = storage.NewDb(pool)
 
