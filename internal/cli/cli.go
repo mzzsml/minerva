@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+    "io"
 
 	"github.com/mzzsml/minerva/internal/config"
 	"github.com/mzzsml/minerva/internal/http"
@@ -12,19 +13,22 @@ import (
 
 const (
 	listenAddrFlagHelp = "listen address."
-	dbConnStrFlagHelp  = "databse connection string."
+	dbFilePathFlagHelp  = "databse file path."
+    verboseFlagHelp = "enable verbosity."
 )
 
 // ParseFlags parses the command line flags provided.
 // If no flags are provided, then it uses the configuration files, located either in
 // $XDG_CONFIG_HOME or $HOME/.config/minerva.
+// ON MACOS: config file home is in /Users/<user>/Library/Appliaction Support/
 //
 // Note that flags have the priority on files, so, if they are provided and the files
 // already exist, ParseFlags ignores the files and uses the given command line flags.
 func ParseFlags() error {
 	var (
 		listenAddrFlag string
-		dbConnStrFlag  string
+		dbFilePathFlag  string
+        verboseFlag bool
 
 		conf config.Config
 
@@ -33,7 +37,8 @@ func ParseFlags() error {
 	)
 
 	flag.StringVar(&listenAddrFlag, "listen", "", listenAddrFlagHelp)
-	flag.StringVar(&dbConnStrFlag, "db", "", dbConnStrFlagHelp)
+	flag.StringVar(&dbFilePathFlag, "db", "", dbFilePathFlagHelp)
+	flag.BoolVar(&verboseFlag, "verbose", false, dbFilePathFlagHelp)
 	flag.Parse()
 
 	// If no flags are given, use the config file.
@@ -49,11 +54,17 @@ func ParseFlags() error {
 				return err
 			}
 		}
-	} else if flag.NFlag() > 0 {
+    } else if flag.NFlag() > 0 {
 		// If flags are given, read their value and put it in conf.
-		conf.DataSourceName = dbConnStrFlag
+		conf.DataSourceName = dbFilePathFlag
 		conf.ListenAddress = listenAddrFlag
+        conf.Verbose = verboseFlag
 	}
+
+    isVerbose := conf.Verbose
+    if !isVerbose {
+        log.SetOutput(io.Discard)
+    }
 
 	pool, err := storage.NewConnectionPool(conf.DataSourceName)
 	if err != nil {
