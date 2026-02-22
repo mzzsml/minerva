@@ -2,9 +2,9 @@ package cli
 
 import (
 	"flag"
+	"io"
 	"log"
 	"os"
-    "io"
 
 	"github.com/mzzsml/minerva/internal/config"
 	"github.com/mzzsml/minerva/internal/http"
@@ -13,8 +13,8 @@ import (
 
 const (
 	listenAddrFlagHelp = "listen address."
-	dbFilePathFlagHelp  = "databse file path."
-    verboseFlagHelp = "enable verbosity."
+	dbFilePathFlagHelp = "databse file path."
+	verboseFlagHelp    = "enable verbosity."
 )
 
 // ParseFlags parses the command line flags provided.
@@ -27,8 +27,8 @@ const (
 func ParseFlags() error {
 	var (
 		listenAddrFlag string
-		dbFilePathFlag  string
-        verboseFlag bool
+		dbFilePathFlag string
+		verboseFlag    bool
 
 		conf config.Config
 
@@ -54,17 +54,17 @@ func ParseFlags() error {
 				return err
 			}
 		}
-    } else if flag.NFlag() > 0 {
+	} else if flag.NFlag() > 0 {
 		// If flags are given, read their value and put it in conf.
 		conf.DataSourceName = dbFilePathFlag
 		conf.ListenAddress = listenAddrFlag
-        conf.Verbose = verboseFlag
+		conf.Verbose = verboseFlag
 	}
 
-    isVerbose := conf.Verbose
-    if !isVerbose {
-        log.SetOutput(io.Discard)
-    }
+	isVerbose := conf.Verbose
+	if !isVerbose {
+		log.SetOutput(io.Discard)
+	}
 
 	pool, err := storage.NewConnectionPool(conf.DataSourceName)
 	if err != nil {
