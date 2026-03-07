@@ -3,7 +3,6 @@ package http
 import (
     "encoding/json"
     "fmt"
-    "html/template"
     "io"
     "log"
     "mime"
@@ -24,7 +23,6 @@ type Server struct {
 func (s *Server) Start() {
     mux := http.NewServeMux()
 
-    mux.HandleFunc("/{$}", s.handleIndex)
     mux.HandleFunc("POST /upload", s.handleUpload)
     mux.HandleFunc("GET /hosts/{$}", s.handleGetHosts)
     mux.HandleFunc("GET /hosts/{addr}", s.handleGetHostDetails)
@@ -38,15 +36,6 @@ func (s *Server) Start() {
     log.Printf("minerva is running on %v", server.Addr)
     if err := server.ListenAndServe(); err != nil {
         log.Fatal(err)
-    }
-}
-
-func (s Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-    t := template.Must(template.New("upload").ParseFiles("./internal/template/upload.html"))
-    err := t.Execute(w, nil)
-    if err != nil {
-        log.Printf("error: %s\n", err)
-        return
     }
 }
 
