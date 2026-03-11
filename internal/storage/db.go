@@ -2,7 +2,9 @@ package storage
 
 import (
     "context"
+    "fmt"
     "log"
+
     "database/sql"
     _ "github.com/mattn/go-sqlite3"
 
@@ -19,6 +21,13 @@ func NewConnectionPool(dbfile string) (*sql.DB, error) {
         return nil, err
     }
     if err = pool.Ping(); err != nil {
+        return nil, err
+    }
+    return pool, nil
+    }
+    err = pool.Ping()
+    if err != nil {
+>>>>>>> 31349f97be9168ab8a6d3e383515faae6c4d5b3f
         return nil, err
     }
     return pool, nil
@@ -217,4 +226,15 @@ func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
         Ports:     ports,
     }
     return h, nil
+}
+
+func (d DB) DeleteHost(addr string) bool {
+    q := `DELETE FROM hosts WHERE ipv4 = $1;`
+    if !d.IsHostAlreadyExisting(addr) {
+        return false
+    }
+    if _, err := d.Pool.ExecContext(ctx, q, addr); err != nil {
+        return false
+    }
+    return true
 }
