@@ -2,9 +2,7 @@ package storage
 
 import (
     "context"
-    "fmt"
     "log"
-
     "database/sql"
     _ "github.com/mattn/go-sqlite3"
 
@@ -13,21 +11,20 @@ import (
 
 var ctx context.Context = context.Background()
 
-// Cnnect() handles the authentication and connection to the Postgres db.
-// Returns a *pgxpool.Pool object.
+// NewConnectionPool opens a connection to the SQLite database, and returns a
+// connection pool or an error;
 func NewConnectionPool(dbfile string) (*sql.DB, error) {
-    pool, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?mode=rw", dbfile))
+    pool, err := sql.Open("sqlite3", "file:" + dbfile +"?mode=rw")
     if err != nil {
         return nil, err
     }
-    err = pool.Ping()
-    if err != nil {
+    if err = pool.Ping(); err != nil {
         return nil, err
     }
     return pool, nil
 }
 
-// Db holds the connecton pool.
+// DB holds the connecton pool.
 // Using this struct it's possible to query the db without the need of
 // reautentication every time.
 type DB struct {
@@ -44,7 +41,6 @@ func (d DB) isPortAlreadyExisting() {}
 
 // InsertPorts queries the db and insert the provided ports for the provided
 // host.
-// It takes the host id and a nparse.Port as input.
 func (d DB) InsertPorts(hostId int, p nparse.Port) {
     q := `INSERT INTO
             port (host_id, protocol, port_num, state, reason, service, product, version, extrainfo)
@@ -65,7 +61,7 @@ func (d DB) InsertPorts(hostId int, p nparse.Port) {
     )
 }
 
-func (d DB) IsHostAlreadyExisting(ipv4 string) bool {
+func (d DB) hostExists(ipv4 string) bool {
     var exists bool
     q := `SELECT EXISTS(SELECT id FROM hosts WHERE ipv4 = $1);`
     err := d.Pool.QueryRowContext(ctx, q, ipv4).Scan(&exists)
@@ -95,7 +91,7 @@ func (d DB) InsertHosts(n *nparse.NmapScan) error {
                 continue
             }
         }
-        if !d.IsHostAlreadyExisting(tmphost["ipv4"]) {
+        if !d.hostExists(tmphost["ipv4"]) {
             err := d.Pool.QueryRowContext(
                 ctx,
                 q,
