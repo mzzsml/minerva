@@ -3,10 +3,7 @@ package http
 import (
     "encoding/json"
     "fmt"
-<<<<<<< HEAD
     "html/template"
-=======
->>>>>>> 31349f97be9168ab8a6d3e383515faae6c4d5b3f
     "io"
     "log"
     "mime"
@@ -27,17 +24,10 @@ type Server struct {
 func (s *Server) Start() {
     mux := http.NewServeMux()
 
-<<<<<<< HEAD
-    mux.HandleFunc("/{$}", s.handleIndex)
-    mux.HandleFunc("POST /upload", s.handleUpload)
-    mux.HandleFunc("GET /hosts/{$}", s.handleGetHosts)
-    mux.HandleFunc("GET /hosts/{addr}", s.handleGetHostDetails)
-=======
     mux.HandleFunc("POST /upload", s.handleUpload)
     mux.HandleFunc("GET /hosts/{$}", s.handleGetHosts)
     mux.HandleFunc("GET /hosts/{addr}", s.handleGetHostDetails)
     mux.HandleFunc("DELETE /hosts/{addr}", s.handleDeleteHost)
->>>>>>> 31349f97be9168ab8a6d3e383515faae6c4d5b3f
 
     server := &http.Server{
         Addr:    s.Addr,
@@ -56,15 +46,8 @@ func (s Server) handleUpload(w http.ResponseWriter, r *http.Request) {
         log.Printf("error: %s\n", err)
         return
     }
-<<<<<<< HEAD
     if strings.HasPrefix(mediaType, "multipart/") {
         mr := multipart.NewReader(r.Body, params["boundary"])
-=======
-
-    if strings.HasPrefix(mediaType, "multipart/") {
-        mr := multipart.NewReader(r.Body, params["boundary"])
-
->>>>>>> 31349f97be9168ab8a6d3e383515faae6c4d5b3f
         for {
             p, err := mr.NextPart()
             if err == io.EOF {
@@ -132,5 +115,4 @@ func (s *Server) handleDeleteHost(w http.ResponseWriter, r *http.Request) {
     }
     w.WriteHeader(http.StatusNotModified)
     return
->>>>>>> 31349f97be9168ab8a6d3e383515faae6c4d5b3f
 }
