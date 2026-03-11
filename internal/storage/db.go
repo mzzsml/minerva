@@ -2,7 +2,6 @@ package storage
 
 import (
     "context"
-    "fmt"
     "log"
 
     "database/sql"
@@ -21,12 +20,6 @@ func NewConnectionPool(dbfile string) (*sql.DB, error) {
         return nil, err
     }
     if err = pool.Ping(); err != nil {
-        return nil, err
-    }
-    return pool, nil
-    }
-    err = pool.Ping()
-    if err != nil {
         return nil, err
     }
     return pool, nil
@@ -229,7 +222,7 @@ func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
 
 func (d DB) DeleteHost(addr string) bool {
     q := `DELETE FROM hosts WHERE ipv4 = $1;`
-    if !d.IsHostAlreadyExisting(addr) {
+    if !d.hostExists(addr) {
         return false
     }
     if _, err := d.Pool.ExecContext(ctx, q, addr); err != nil {

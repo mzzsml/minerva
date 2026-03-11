@@ -3,7 +3,6 @@ package http
 import (
     "encoding/json"
     "fmt"
-    "html/template"
     "io"
     "log"
     "mime"
