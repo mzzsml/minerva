@@ -188,8 +188,6 @@ func (d DB) GetHosts() ([]host, error) {
 
 func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
     var (
-        h        nparse.Host
-        ports    []nparse.Port
         id       int
         mac      string
         vendor   string
@@ -198,9 +196,8 @@ func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
     )
     err := d.Pool.QueryRowContext(ctx, q, addr).Scan(&id, &mac, &vendor, &hostname)
     if err != nil {
-        return h, err
+        return nil, err
     }
-    ports = d.GetPortsByHostId(id)
     addrIPv4 := nparse.Address{
         Addr:     addr,
         AddrType: "ipv4",
@@ -210,12 +207,11 @@ func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
         AddrType: "mac",
         Vendor:   vendor,
     }
-    addrs := []nparse.Address{addrIPv4, addrMac}
-    hostnames := []string{hostname}
-    h = nparse.Host{
-        Addrs:     addrs,
-        Hostnames: hostnames,
-        Ports:     ports,
+    h := nparse.Host{
+        Addrs:     []nparse.Address{addrIPv4, addrMac},
+        Hostnames: []string{hostname},
+        Ports:     d.GetPortsByHostId(id),
+
     }
     return h, nil
 }
