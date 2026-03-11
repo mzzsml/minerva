@@ -27,7 +27,6 @@ func NewConnectionPool(dbfile string) (*sql.DB, error) {
     }
     err = pool.Ping()
     if err != nil {
->>>>>>> 31349f97be9168ab8a6d3e383515faae6c4d5b3f
         return nil, err
     }
     return pool, nil
