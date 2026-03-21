@@ -3,9 +3,10 @@ module github.com/mzzsml/minerva
 go 1.24.3
 
 require (
-	github.com/BurntSushi/toml v1.5.0
+	github.com/BurntSushi/toml v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
-	github.com/mzzsml/nparse v0.0.0-20251130184739-e58bfbbca757
+	github.com/mattn/go-sqlite3 v1.14.37
+	github.com/mzzsml/nparse v0.0.0-20260320133712-7c9dd51410ab
 )
 
 require (
@@ -14,7 +15,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgtype v1.14.4 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/mattn/go-sqlite3 v1.14.32 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/text v0.31.0 // indirect

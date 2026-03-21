@@ -1,28 +1,28 @@
 package config
 
 import (
-    "log"
-    "os"
-    "path/filepath"
+	"log"
+	"os"
+	"path/filepath"
 
-    "github.com/BurntSushi/toml"
+	"github.com/BurntSushi/toml"
 )
 
 type Config struct {
-    ListenAddress  string `toml:"ListenAddress"`
-    DataSourceName string `toml:"DataSourceName"`
-    Verbose        bool   `toml:"verbose"`
+	ListenAddress  string `toml:"ListenAddress"`
+	DataSourceName string `toml:"DataSourceName"`
+	Verbose        bool   `toml:"verbose"`
 }
 
 // path returns the configuration file's path.
 // The file's location depends on the operating system.
 func path() (string, error) {
-    d, err := os.UserConfigDir()
-    if err != nil {
-        return "", err
-    }
-    configFilePath := filepath.Join(d, "minerva", "minerva.toml")
-    return configFilePath, err
+	d, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	configFilePath := filepath.Join(d, "minerva", "minerva.toml")
+	return configFilePath, err
 }
 
 // LoadFromFile reads the confiuration parameters from the given
@@ -32,35 +32,35 @@ func path() (string, error) {
 // It returns an error if the file not exists or if there are problems
 // unmarshaling.
 func (c *Config) LoadFromFile(filename string) error {
-    if _,err := os.Stat(filename); err != nil && os.IsNotExist(err) {
-        return err
-    }
+	if _, err := os.Stat(filename); err != nil && os.IsNotExist(err) {
+		return err
+	}
 
-    // NOTE: if file is empty, LoadFromFile as of now doesn't print an error.
-    fileContent, err := os.ReadFile(filename)
-    err = toml.Unmarshal(fileContent, &c)
-    if err != nil {
-        return err
-    }
+	// NOTE: if file is empty, LoadFromFile as of now doesn't print an error.
+	fileContent, err := os.ReadFile(filename)
+	err = toml.Unmarshal(fileContent, &c)
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 // FindConfigFile simply looks for Minerva configuration files in
 // $XDG_CONFIG_HOME and &HOME/.config.
 // If none are found it returns a ErrNotExists.
 func FindConfigFile() (configFilePath string, err error) {
-    configFilePath, err = path()
-    if err != nil {
-        return "", err
-    }
+	configFilePath, err = path()
+	if err != nil {
+		return "", err
+	}
 
-    _, err = os.Stat(configFilePath)
-    // If the file does not exists, return a ErrNotExist error.
-    if err != nil && os.IsNotExist(err) {
-        return "", err
-    }
-    // Otherwise, if the file exists, fileInfo will be populated.
-    log.Printf("Found configuration file in %s.\n", configFilePath)
-    return configFilePath, err
+	_, err = os.Stat(configFilePath)
+	// If the file does not exists, return a ErrNotExist error.
+	if err != nil && os.IsNotExist(err) {
+		return "", err
+	}
+	// Otherwise, if the file exists, fileInfo will be populated.
+	log.Printf("Found configuration file in %s.\n", configFilePath)
+	return configFilePath, err
 }
