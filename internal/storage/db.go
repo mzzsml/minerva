@@ -38,33 +38,6 @@ func NewDb(pool *sql.DB) *DB {
     return &DB{pool}
 }
 
-// insertPorts queries the db and insert the provided ports for the provided
-// host.
-func (d DB) insertPorts(hostId int, ports []nparse.Port) error {
-    q := `INSERT INTO ports values ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING rowid;`
-    var row int
-
-    for _, port := range ports {
-        err := d.Pool.QueryRowContext(
-            ctx,
-            q,
-            hostId,
-            port.Protocol,
-            port.PortId,
-            port.State.State,
-            port.State.Reason,
-            port.Service.Name,
-            port.Service.Product,
-            port.Service.Version,
-            port.Service.Extrainfo,
-        ).Scan(&row)
-        if err != nil {
-            return fmt.Errorf("insertPorts: error in inserting ports to database: %s", err)
-        }
-    }
-    return nil
-}
-
 func (d DB) hostExists(ipv4 string) bool {
     var exists bool
     q := `SELECT EXISTS(SELECT id FROM hosts WHERE ipv4 = $1);`
@@ -75,28 +48,12 @@ func (d DB) hostExists(ipv4 string) bool {
     return false
 }
 
-func (d DB) insertHostnames(hostId int, hostnames []nparse.Hostname) error {
-    var row int
-    q := `INSERT INTO
-            hostnames (host_id, hostname, type)
-            values ($1, $2, $3)
-          RETURNING rowid;`
-    for _, h := range hostnames {
-        err := d.Pool.QueryRowContext(ctx, q, hostId, h.Hostname, h.Type).Scan(&row)
-        if err != nil {
-            return fmt.Errorf("insertHostnames: error in inserting hostnames to database: %s", err)
-        }
-    }
-    return nil
-}
-
-// InsertHosts inserts a new host in the database, if the host does not already
-// exists.
+// InsertHosts inserts a new host in the database.
 func (d DB) InsertHosts(n *nparse.NmapScan) error {
     var id int
     q := `INSERT INTO hosts (ipv4, mac, vendor, status, reason, scanned_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id;`
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id;`
     for _, h := range n.Hosts {
         ipv4 := h.AddrInfo("ipv4")
         mac := h.AddrInfo("mac")
@@ -118,85 +75,53 @@ func (d DB) InsertHosts(n *nparse.NmapScan) error {
         if err != nil {
             return fmt.Errorf("InserHosts: error in inserting host(s) to database: %s", err)
         }
-        if err := d.insertPorts(id, h.Ports); err != nil {
+        insertPorts := func(hostid int, ports []nparse.Port) error {
+            q := `INSERT INTO ports
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                  RETURNING rowid;`
+            var row int
+            for _, port := range ports {
+                err := d.Pool.QueryRowContext(
+                    ctx,
+                    q,
+                    hostid,
+                    port.Protocol,
+                    port.PortId,
+                    port.State.State,
+                    port.State.Reason,
+                    port.Service.Name,
+                    port.Service.Product,
+                    port.Service.Version,
+                    port.Service.Extrainfo,
+                ).Scan(&row)
+                if err != nil {
+                    return fmt.Errorf("error in inserting ports to database: %s", err)
+                }
+            }
+            return nil
+        }
+        if err := insertPorts(id, h.Ports); err != nil {
             return fmt.Errorf("InsertHosts: %s", err)
         }
-        if err := d.insertHostnames(id, h.Hostnames); err != nil {
-            return fmt.Errorf("InsertHosts: %s", err)
+        insertHostnames := func(hostid int, hostnames []nparse.Hostname) error {
+            var row int
+            q := `INSERT INTO
+                    hostnames (host_id, hostname, type)
+                    values ($1, $2, $3)
+                  RETURNING rowid;`
+            for _, h := range hostnames {
+                err := d.Pool.QueryRowContext(ctx, q, hostid, h.Hostname, h.Type).Scan(&row)
+                if err != nil {
+                    return fmt.Errorf("error in inserting hostnames to database: %s", err)
+                }
+            }
+            return nil
+        }
+        if err := insertHostnames(id, h.Hostnames); err != nil {
+            return fmt.Errorf("insertHosts: %s", err)
         }
     }
     return nil
-}
-
-// GetPorts queries the db and gets every port for a provided host.
-// It takes the host ID as input and returns and array of nmap.Port.
-func (d DB) GetPortsByHostId(hostId int) ([]nparse.Port, error) {
-    var (
-        p     nparse.Port
-        ports []nparse.Port
-    )
-
-    q := `SELECT
-            protocol,
-            port_num,
-            state,
-            reason,
-            service,
-            product,
-            COALESCE(version, ''), -- if version is null, return an empty string https://sqlite.org/lang_corefunc.html#coalesce
-            COALESCE(extrainfo, '')
-          FROM
-            ports
-          WHERE host_id = $1;`
-
-    rows, err := d.Pool.Query(q, hostId)
-    if err != nil {
-        return nil, fmt.Errorf("GetPortsByHostId: error in reading ports from database: %s", err)
-    }
-    defer rows.Close()
-
-    for rows.Next() {
-        err := rows.Scan(
-            &p.Protocol,
-            &p.PortId,
-            &p.State.State,
-            &p.State.Reason,
-            &p.Service.Name,
-            &p.Service.Product,
-            &p.Service.Version,
-            &p.Service.Extrainfo,
-        )
-        if err != nil {
-            return nil, fmt.Errorf("GetPortsByHostID: %s", err)
-        }
-        ports = append(ports, p)
-    }
-    return ports, nil
-}
-
-func (d DB) getHostnames(hostId int) ([]nparse.Hostname, error) {
-    var (
-        q = `SELECT
-                COALESCE(hostname, ''),
-                COALESCE(type, '')
-            FROM hostnames 
-            WHERE host_id = $1;`
-        hostname  nparse.Hostname
-        hostnames []nparse.Hostname
-    )
-
-    rows, err := d.Pool.Query(q, hostId)
-    if err != nil {
-        return nil, fmt.Errorf("getHostnames: error in getting hostnames from database: %s", err)
-    }
-    defer rows.Close()
-    for rows.Next() {
-        if err := rows.Scan(&hostname.Hostname, &hostname.Type); err != nil {
-            return nil, fmt.Errorf("getHostnames: %s", err)
-        }
-        hostnames = append(hostnames, hostname)
-    }
-    return hostnames, nil
 }
 
 type host struct {
@@ -227,7 +152,7 @@ func (d DB) GetHosts() ([]host, error) {
     return hosts, nil
 }
 
-func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
+func (d DB) GetHostInfo(addr string) (nparse.Host, error) {
     var (
         id                        int
         mac                       string
@@ -245,17 +170,80 @@ func (d DB) GetHostInfoByIPv4(addr string) (nparse.Host, error) {
     )
     err := d.Pool.QueryRowContext(ctx, q, addr).Scan(&id, &mac, &vendor, &status, &reason, &scannedat)
     if err != nil {
-        return nparse.Host{}, fmt.Errorf("GetHostInfoByIPv4: error in getting host info: %s", err)
+        return nparse.Host{}, fmt.Errorf("GetHostInfo: error in getting host info: %s", err)
     }
     addrIPv4 := nparse.Address{Addr: addr, AddrType: "ipv4"}
     addrMac := nparse.Address{mac, "mac", vendor}
-    hostnames, err := d.getHostnames(id)
+    getHostnames := func(hostid int) ([]nparse.Hostname, error) {
+        var (
+            q = `SELECT
+                    COALESCE(hostname, ''),
+                    COALESCE(type, '')
+                FROM hostnames 
+                WHERE host_id = $1;`
+            hostname  nparse.Hostname
+            hostnames []nparse.Hostname
+        )
+        rows, err := d.Pool.Query(q, hostid)
+        if err != nil {
+            return nil, fmt.Errorf("getHostnames: error in getting hostnames from database: %s", err)
+        }
+        defer rows.Close()
+        for rows.Next() {
+            if err := rows.Scan(&hostname.Hostname, &hostname.Type); err != nil {
+                return nil, fmt.Errorf("getHostnames: %s", err)
+            }
+            hostnames = append(hostnames, hostname)
+        }
+        return hostnames, nil
+    }
+    hostnames, err := getHostnames(id)
     if err != nil {
         return nparse.Host{}, fmt.Errorf("GetHostInfoByIPv4: %s", err)
     }
-    ports, err := d.GetPortsByHostId(id)
+    getPorts := func(hostid int) ([]nparse.Port, error) {
+        var (
+            p     nparse.Port
+            ports []nparse.Port
+        )
+        q := `SELECT
+                protocol,
+                port_num,
+                state,
+                reason,
+                service,
+                product,
+                COALESCE(version, ''), -- if version is null, return an empty string https://sqlite.org/lang_corefunc.html#coalesce
+                COALESCE(extrainfo, '')
+              FROM
+                ports
+              WHERE host_id = $1;`
+        rows, err := d.Pool.Query(q, hostid)
+        if err != nil {
+            return nil, fmt.Errorf("GetPorts: error in reading ports from database: %s", err)
+        }
+        defer rows.Close()
+        for rows.Next() {
+            err := rows.Scan(
+                &p.Protocol,
+                &p.PortId,
+                &p.State.State,
+                &p.State.Reason,
+                &p.Service.Name,
+                &p.Service.Product,
+                &p.Service.Version,
+                &p.Service.Extrainfo,
+            )
+            if err != nil {
+                return nil, fmt.Errorf("GetPorts: %s", err)
+            }
+            ports = append(ports, p)
+        }
+        return ports, nil
+    }
+    ports, err := getPorts(id)
     if err != nil {
-        return nparse.Host{}, fmt.Errorf("GetHostInfoByIPv4: %s", err)
+        return nparse.Host{}, fmt.Errorf("GetHostInfo: %s", err)
     }
     h := nparse.Host{
         Status:    nparse.State{status, reason},
